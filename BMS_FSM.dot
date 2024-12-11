@@ -1,0 +1,42 @@
+digraph{
+subgraph cluster_0 {
+
+    idle -> balancing -> idle
+
+    subgraph charging {
+        closing_air_neg -> closing_precharge
+        closing_air_neg -> resetting_airs_precharge
+        closing_precharge -> resetting_airs_precharge
+        closing_precharge -> precharge
+        precharge -> closing_air_pos
+        closing_air_pos -> opening_precharge
+        closing_air_pos -> resetting_airs_precharge
+        opening_precharge -> charging
+        charging -> resetting_airs_precharge
+
+}
+    subgraph driving{
+        closing_air_neg -> closing_precharge
+        closing_air_neg -> resetting_airs_precharge
+        closing_precharge -> resetting_airs_precharge
+        closing_precharge -> precharge
+        precharge -> closing_air_pos
+        closing_air_pos -> resetting_airs_precharge
+        closing_air_pos -> opening_precharge
+        opening_precharge -> driving
+        driving -> resetting_airs_precharge
+        label = "DRIVING";
+    }
+}
+
+subgraph cluster_2 {
+    ams_error -> ams_imd_error
+    imd_error -> ams_imd_error
+    ams_imd_error -> resetting_error
+}
+start -> idle
+resetting_error -> idle
+idle -> closing_air_neg
+idle -> closing_air_neg
+resetting_airs_precharge -> idle
+}
