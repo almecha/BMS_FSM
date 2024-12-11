@@ -1,0 +1,12 @@
+digraph {
+	idle -> closing_air_neg
+    closing_air_neg -> closing_precharge
+    closing_air_neg -> resetting_airs_precharge
+    closing_precharge -> resetting_airs_precharge
+    closing_precharge -> precharge
+    precharge -> closing_air_pos
+    closing_air_pos -> resetting_airs_precharge
+    closing_air_pos -> opening_precharge
+    opening_precharge -> driving
+    driving -> resetting_airs_precharge
+}
