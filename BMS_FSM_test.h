@@ -9,25 +9,35 @@
  * - Federico Carbone <federico.carbone.sc@gmail.com>
  */
 
-#ifndef FSM_BMS_FSM_TEST_H
-#define FSM_BMS_FSM_TEST_H
+#ifndef FSM_TEST1_H
+#define FSM_TEST1_H
 
 #include "fsm.h"
 
-enum FSM_BMS_FSM_TEST_StateEnum {
-    FSM_BMS_FSM_TEST_start = 0,
-    FSM_BMS_FSM_TEST_idle = 1,
-    FSM_BMS_FSM_TEST_resetting_error = 2,
-    FSM_BMS_FSM_TEST_closing_air_neg = 3,
-    FSM_BMS_FSM_TEST_resetting_airs_precharge = 4,
+enum FSM_TEST1_StateEnum {
+    FSM_TEST1_start = 0,
+    FSM_TEST1_idle = 1,
+    FSM_TEST1_resetting_error = 2,
+    FSM_TEST1_closing_air_neg = 3,
+    FSM_TEST1_resetting_airs_precharge = 4,
+    FSM_TEST1_balancing = 5,
+    FSM_TEST1_closing_precharge = 6,
+    FSM_TEST1_precharge = 7,
+    FSM_TEST1_closing_air_pos = 8,
+    FSM_TEST1_opening_precharge = 9,
+    FSM_TEST1_charging = 10,
+    FSM_TEST1_driving = 11,
+    FSM_TEST1_ams_error = 12,
+    FSM_TEST1_ams_imd_error = 13,
+    FSM_TEST1_imd_error = 14,
 
-    _FSM_BMS_FSM_TEST_STATE_COUNT = 5,
+    _FSM_TEST1_STATE_COUNT = 15,
 
     /** @brief Invalid state, leads to irrecoverable error i.e. hard fault */
-    _FSM_BMS_FSM_TEST_DIE = 6
+    _FSM_TEST1_DIE = 16
 };
 
-typedef enum FSM_BMS_FSM_TEST_StateEnum FSM_BMS_FSM_TEST_StateTypeDef;
+typedef enum FSM_TEST1_StateEnum FSM_TEST1_StateTypeDef;
 
 /**
  * @brief
@@ -37,7 +47,7 @@ typedef enum FSM_BMS_FSM_TEST_StateEnum FSM_BMS_FSM_TEST_StateTypeDef;
  * @param transition_callback callback of a transition event
  * @return status
  */
-STMLIBS_StatusTypeDef FSM_BMS_FSM_TEST_init(
+STMLIBS_StatusTypeDef FSM_TEST1_init(
     FSM_HandleTypeDef *handle,
     uint8_t event_count,
     FSM_callback_function run_callback,
@@ -52,26 +62,26 @@ STMLIBS_StatusTypeDef FSM_BMS_FSM_TEST_init(
  * @param event event
  * @return next state
  */
-FSM_BMS_FSM_TEST_StateTypeDef FSM_BMS_FSM_TEST_start_event_handle(uint8_t event);
+FSM_TEST1_StateTypeDef FSM_TEST1_start_event_handle(uint8_t event);
 
 /**
  * @brief
  * @param handle FSM handle
  */
-void FSM_BMS_FSM_TEST_start_entry();
+void FSM_TEST1_start_entry();
 
 /**
  * @brief
  * @param handle FSM handle
  * @return next state
  */
-FSM_BMS_FSM_TEST_StateTypeDef FSM_BMS_FSM_TEST_start_do_work();
+FSM_TEST1_StateTypeDef FSM_TEST1_start_do_work();
 
 /**
  * @brief
  * @param handle FSM handle
  */
-void FSM_BMS_FSM_TEST_start_exit();
+void FSM_TEST1_start_exit();
 
 /**
  * @brief
@@ -79,26 +89,26 @@ void FSM_BMS_FSM_TEST_start_exit();
  * @param event event
  * @return next state
  */
-FSM_BMS_FSM_TEST_StateTypeDef FSM_BMS_FSM_TEST_idle_event_handle(uint8_t event);
+FSM_TEST1_StateTypeDef FSM_TEST1_idle_event_handle(uint8_t event);
 
 /**
  * @brief
  * @param handle FSM handle
  */
-void FSM_BMS_FSM_TEST_idle_entry();
+void FSM_TEST1_idle_entry();
 
 /**
  * @brief
  * @param handle FSM handle
  * @return next state
  */
-FSM_BMS_FSM_TEST_StateTypeDef FSM_BMS_FSM_TEST_idle_do_work();
+FSM_TEST1_StateTypeDef FSM_TEST1_idle_do_work();
 
 /**
  * @brief
  * @param handle FSM handle
  */
-void FSM_BMS_FSM_TEST_idle_exit();
+void FSM_TEST1_idle_exit();
 
 /**
  * @brief
@@ -106,26 +116,26 @@ void FSM_BMS_FSM_TEST_idle_exit();
  * @param event event
  * @return next state
  */
-FSM_BMS_FSM_TEST_StateTypeDef FSM_BMS_FSM_TEST_resetting_error_event_handle(uint8_t event);
+FSM_TEST1_StateTypeDef FSM_TEST1_resetting_error_event_handle(uint8_t event);
 
 /**
  * @brief
  * @param handle FSM handle
  */
-void FSM_BMS_FSM_TEST_resetting_error_entry();
+void FSM_TEST1_resetting_error_entry();
 
 /**
  * @brief
  * @param handle FSM handle
  * @return next state
  */
-FSM_BMS_FSM_TEST_StateTypeDef FSM_BMS_FSM_TEST_resetting_error_do_work();
+FSM_TEST1_StateTypeDef FSM_TEST1_resetting_error_do_work();
 
 /**
  * @brief
  * @param handle FSM handle
  */
-void FSM_BMS_FSM_TEST_resetting_error_exit();
+void FSM_TEST1_resetting_error_exit();
 
 /**
  * @brief
@@ -133,26 +143,26 @@ void FSM_BMS_FSM_TEST_resetting_error_exit();
  * @param event event
  * @return next state
  */
-FSM_BMS_FSM_TEST_StateTypeDef FSM_BMS_FSM_TEST_closing_air_neg_event_handle(uint8_t event);
+FSM_TEST1_StateTypeDef FSM_TEST1_closing_air_neg_event_handle(uint8_t event);
 
 /**
  * @brief
  * @param handle FSM handle
  */
-void FSM_BMS_FSM_TEST_closing_air_neg_entry();
+void FSM_TEST1_closing_air_neg_entry();
 
 /**
  * @brief
  * @param handle FSM handle
  * @return next state
  */
-FSM_BMS_FSM_TEST_StateTypeDef FSM_BMS_FSM_TEST_closing_air_neg_do_work();
+FSM_TEST1_StateTypeDef FSM_TEST1_closing_air_neg_do_work();
 
 /**
  * @brief
  * @param handle FSM handle
  */
-void FSM_BMS_FSM_TEST_closing_air_neg_exit();
+void FSM_TEST1_closing_air_neg_exit();
 
 /**
  * @brief
@@ -160,26 +170,296 @@ void FSM_BMS_FSM_TEST_closing_air_neg_exit();
  * @param event event
  * @return next state
  */
-FSM_BMS_FSM_TEST_StateTypeDef FSM_BMS_FSM_TEST_resetting_airs_precharge_event_handle(uint8_t event);
+FSM_TEST1_StateTypeDef FSM_TEST1_resetting_airs_precharge_event_handle(uint8_t event);
 
 /**
  * @brief
  * @param handle FSM handle
  */
-void FSM_BMS_FSM_TEST_resetting_airs_precharge_entry();
+void FSM_TEST1_resetting_airs_precharge_entry();
 
 /**
  * @brief
  * @param handle FSM handle
  * @return next state
  */
-FSM_BMS_FSM_TEST_StateTypeDef FSM_BMS_FSM_TEST_resetting_airs_precharge_do_work();
+FSM_TEST1_StateTypeDef FSM_TEST1_resetting_airs_precharge_do_work();
 
 /**
  * @brief
  * @param handle FSM handle
  */
-void FSM_BMS_FSM_TEST_resetting_airs_precharge_exit();
+void FSM_TEST1_resetting_airs_precharge_exit();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ * @param event event
+ * @return next state
+ */
+FSM_TEST1_StateTypeDef FSM_TEST1_balancing_event_handle(uint8_t event);
+
+/**
+ * @brief
+ * @param handle FSM handle
+ */
+void FSM_TEST1_balancing_entry();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ * @return next state
+ */
+FSM_TEST1_StateTypeDef FSM_TEST1_balancing_do_work();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ */
+void FSM_TEST1_balancing_exit();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ * @param event event
+ * @return next state
+ */
+FSM_TEST1_StateTypeDef FSM_TEST1_closing_precharge_event_handle(uint8_t event);
+
+/**
+ * @brief
+ * @param handle FSM handle
+ */
+void FSM_TEST1_closing_precharge_entry();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ * @return next state
+ */
+FSM_TEST1_StateTypeDef FSM_TEST1_closing_precharge_do_work();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ */
+void FSM_TEST1_closing_precharge_exit();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ * @param event event
+ * @return next state
+ */
+FSM_TEST1_StateTypeDef FSM_TEST1_precharge_event_handle(uint8_t event);
+
+/**
+ * @brief
+ * @param handle FSM handle
+ */
+void FSM_TEST1_precharge_entry();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ * @return next state
+ */
+FSM_TEST1_StateTypeDef FSM_TEST1_precharge_do_work();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ */
+void FSM_TEST1_precharge_exit();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ * @param event event
+ * @return next state
+ */
+FSM_TEST1_StateTypeDef FSM_TEST1_closing_air_pos_event_handle(uint8_t event);
+
+/**
+ * @brief
+ * @param handle FSM handle
+ */
+void FSM_TEST1_closing_air_pos_entry();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ * @return next state
+ */
+FSM_TEST1_StateTypeDef FSM_TEST1_closing_air_pos_do_work();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ */
+void FSM_TEST1_closing_air_pos_exit();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ * @param event event
+ * @return next state
+ */
+FSM_TEST1_StateTypeDef FSM_TEST1_opening_precharge_event_handle(uint8_t event);
+
+/**
+ * @brief
+ * @param handle FSM handle
+ */
+void FSM_TEST1_opening_precharge_entry();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ * @return next state
+ */
+FSM_TEST1_StateTypeDef FSM_TEST1_opening_precharge_do_work();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ */
+void FSM_TEST1_opening_precharge_exit();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ * @param event event
+ * @return next state
+ */
+FSM_TEST1_StateTypeDef FSM_TEST1_charging_event_handle(uint8_t event);
+
+/**
+ * @brief
+ * @param handle FSM handle
+ */
+void FSM_TEST1_charging_entry();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ * @return next state
+ */
+FSM_TEST1_StateTypeDef FSM_TEST1_charging_do_work();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ */
+void FSM_TEST1_charging_exit();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ * @param event event
+ * @return next state
+ */
+FSM_TEST1_StateTypeDef FSM_TEST1_driving_event_handle(uint8_t event);
+
+/**
+ * @brief
+ * @param handle FSM handle
+ */
+void FSM_TEST1_driving_entry();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ * @return next state
+ */
+FSM_TEST1_StateTypeDef FSM_TEST1_driving_do_work();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ */
+void FSM_TEST1_driving_exit();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ * @param event event
+ * @return next state
+ */
+FSM_TEST1_StateTypeDef FSM_TEST1_ams_error_event_handle(uint8_t event);
+
+/**
+ * @brief
+ * @param handle FSM handle
+ */
+void FSM_TEST1_ams_error_entry();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ * @return next state
+ */
+FSM_TEST1_StateTypeDef FSM_TEST1_ams_error_do_work();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ */
+void FSM_TEST1_ams_error_exit();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ * @param event event
+ * @return next state
+ */
+FSM_TEST1_StateTypeDef FSM_TEST1_ams_imd_error_event_handle(uint8_t event);
+
+/**
+ * @brief
+ * @param handle FSM handle
+ */
+void FSM_TEST1_ams_imd_error_entry();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ * @return next state
+ */
+FSM_TEST1_StateTypeDef FSM_TEST1_ams_imd_error_do_work();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ */
+void FSM_TEST1_ams_imd_error_exit();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ * @param event event
+ * @return next state
+ */
+FSM_TEST1_StateTypeDef FSM_TEST1_imd_error_event_handle(uint8_t event);
+
+/**
+ * @brief
+ * @param handle FSM handle
+ */
+void FSM_TEST1_imd_error_entry();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ * @return next state
+ */
+FSM_TEST1_StateTypeDef FSM_TEST1_imd_error_do_work();
+
+/**
+ * @brief
+ * @param handle FSM handle
+ */
+void FSM_TEST1_imd_error_exit();
 
 
-#endif // FSM_BMS_FSM_TEST_H
+#endif // FSM_TEST1_H
