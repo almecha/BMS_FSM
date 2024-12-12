@@ -1,32 +1,37 @@
 digraph{
 
-start -> idle
+idle -> active_idle
 resetting_error -> idle
-idle -> closing_air_neg
-idle -> closing_air_neg
-resetting_airs_precharge -> idle
 
-idle -> balancing -> idle
+active_idle -> balancing -> active_idle
 
-closing_air_neg -> closing_precharge
-closing_air_neg -> resetting_airs_precharge
-closing_precharge -> resetting_airs_precharge
-closing_precharge -> precharge
-precharge -> closing_air_pos
-closing_air_pos -> opening_precharge
-closing_air_pos -> resetting_airs_precharge
-opening_precharge -> charging
-charging -> resetting_airs_precharge
+active_idle -> charging_idle
+charging_idle -> active_idle
+charging_idle -> charging_closing_air_neg
+charging_closing_air_neg -> charging_closing_precharge
+charging_closing_air_neg -> charging_resetting_airs_precharge
+charging_closing_precharge -> charging_resetting_airs_precharge
+charging_closing_precharge -> charging_precharge
+charging_precharge -> charging_closing_air_pos
+charging_closing_air_pos -> charging_opening_precharge
+charging_closing_air_pos -> charging_resetting_airs_precharge
+charging_opening_precharge -> charging_charging
+charging_charging -> charging_resetting_airs_precharge
+charging_resetting_airs_precharge -> active_idle
 
-closing_air_neg -> closing_precharge
-closing_air_neg -> resetting_airs_precharge
-closing_precharge -> resetting_airs_precharge
-closing_precharge -> precharge
-precharge -> closing_air_pos
-closing_air_pos -> resetting_airs_precharge
-closing_air_pos -> opening_precharge
-opening_precharge -> driving
-driving -> resetting_airs_precharge
+active_idle -> driving_idle
+driving_idle -> active_idle
+driving_idle -> driving_closing_air_neg
+driving_closing_air_neg -> driving_closing_precharge
+driving_closing_air_neg -> driving_resetting_airs_precharge
+driving_closing_precharge -> driving_resetting_airs_precharge
+driving_closing_precharge -> driving_precharge
+driving_precharge -> driving_closing_air_pos
+driving_closing_air_pos -> driving_resetting_airs_precharge
+driving_closing_air_pos -> driving_opening_precharge
+driving_opening_precharge -> driving_driving
+driving_driving -> driving_resetting_airs_precharge
+driving_resetting_airs_precharge -> active_idle
 
 
 ams_error -> ams_imd_error
