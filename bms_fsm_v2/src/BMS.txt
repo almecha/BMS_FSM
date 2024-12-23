@@ -2,47 +2,19 @@
 #include "StateMachine.h"
 #include <stdio.h>
 
- uint64_t v_max_id_rx, v_min_id_rx, v_max_rx, v_min_rx, v_mean_rx;
-
-// NTC readings
-extern volatile uint8_t ntc_temp;   // probably for overtemperature errors
-extern volatile uint16_t ntc_value; // raw reading of the ntc
-
-// TLB signals
-uint8_t air_neg_cmd_is_active, air_neg_is_closed, air_neg_stg_mech_state_signal_is_active, air_pos_cmd_is_active,
-    air_pos_is_closed, air_pos_stg_mech_state_signal_is_active,
-    ams_err_is_active = 1, dcbus_is_over60_v, dcbus_prech_rly_cmd_is_active, dcbus_prech_rly_is_closed,
-    imd_err_is_active = 1, imp_dcbus_is_active, imp_any_is_active = 1, imp_hv_relays_signals_is_active,
-    tsal_green_is_active, close_precharge_is_done;   // TO RECHECK LATER
-
-void VariableSaving(BMSData* variables){
-    variables->v_max_id_rx = v_max_id_rx;
-    variables->v_min_id_rx = v_min_id_rx;
-    variables->v_max_rx = v_max_rx;
-    variables->v_min_rx = v_min_rx;
-    variables->v_mean_rx = v_mean_rx;
-    variables->ntc_temp = ntc_temp;
-    variables->ntc_value = ntc_value;
-    variables->air_neg_cmd_is_active = air_neg_cmd_is_active;
-    variables->air_neg_is_closed = air_neg_is_closed;
-    variables->air_neg_stg_mech_state_signal_is_active = air_neg_stg_mech_state_signal_is_active;
-    variables->air_pos_cmd_is_active = air_pos_cmd_is_active;
-    variables->air_pos_is_closed = air_pos_is_closed;
-    variables->air_pos_stg_mech_state_signal_is_active = air_pos_stg_mech_state_signal_is_active;
-    variables->ams_err_is_active = ams_err_is_active;
-    variables->dcbus_is_over60_v = dcbus_is_over60_v;
-    variables->dcbus_prech_rly_cmd_is_active = dcbus_prech_rly_cmd_is_active;
-    variables->dcbus_prech_rly_is_closed = dcbus_prech_rly_is_closed;
-    variables->imd_err_is_active = imd_err_is_active;
-    variables->imp_any_is_active = imp_any_is_active;
-    variables->imp_dcbus_is_active = imp_dcbus_is_active;
-    variables->imp_hv_relays_signals_is_active = imp_hv_relays_signals_is_active;
-    variables -> tsal_green_is_active = tsal_green_is_active;
-    variables -> close_precharge_is_done = close_precharge_is_done;
-}
-
 enum States
-{   
+{
+    BMS_IDLE,
+    BMS_ACTIVE_IDLE,
+    BMS_BALANCING,
+    BMS_CHARGING_IDLE,
+    BMS_CHARGING_CLOSING_AIR_NEG,
+    BMS_CHARGING_CLOSING_PRECHARGE,
+    BMS_CHARGING_PRECHARGE,
+    BMS_CHARGING_CLOSING_AIR_POS,
+    BMS_CHARGING_OPENING_PRECHARGE,
+    BMS_CHARGING_CHARGING,
+    BMS_CHARGING_RESETTING_AIRS_PRECHARGE,
     BMS_DRIVING_IDLE,
     BMS_DRIVING_CLOSING_AIR_NEG,
     BMS_DRIVING_CLOSING_PRECHARGE,
@@ -59,6 +31,17 @@ enum States
 };
 
 // State machine state functions
+STATE_DECLARE(IDLE, BMSData)
+STATE_DECLARE(ACTIVE_IDLE, BMSData)
+STATE_DECLARE(BALANCING, BMSData)
+STATE_DECLARE(CHARGING_IDLE, BMSData)
+STATE_DECLARE(CHARGING_CLOSING_AIR_NEG, BMSData)
+STATE_DECLARE(CHARGING_CLOSING_PRECHARGE, BMSData)
+STATE_DECLARE(CHARGING_PRECHARGE, BMSData)
+STATE_DECLARE(CHARGING_CLOSING_AIR_POS, BMSData)
+STATE_DECLARE(CHARGING_OPENING_PRECHARGE, BMSData)
+STATE_DECLARE(CHARGING_CHARGING, BMSData)
+STATE_DECLARE(CHARGING_RESETTING_AIRS_PRECHARGE, BMSData)
 STATE_DECLARE(DRIVING_IDLE, BMSData)
 STATE_DECLARE(DRIVING_CLOSING_AIR_NEG, BMSData)
 STATE_DECLARE(DRIVING_CLOSING_PRECHARGE, BMSData)
@@ -74,7 +57,17 @@ STATE_DECLARE(RESETTING_ERROR, BMSData)
 
 // State map to define state function order
 BEGIN_STATE_MAP(BMS)
-
+    STATE_MAP_ENTRY(BMS_IDLE)
+    STATE_MAP_ENTRY(BMS_ACTIVE_IDLE)
+    STATE_MAP_ENTRY(BMS_BALANCING)
+    STATE_MAP_ENTRY(BMS_CHARGING_IDLE)
+    STATE_MAP_ENTRY(BMS_CHARGING_CLOSING_AIR_NEG)
+    STATE_MAP_ENTRY(BMS_CHARGING_CLOSING_PRECHARGE)
+    STATE_MAP_ENTRY(BMS_CHARGING_PRECHARGE)
+    STATE_MAP_ENTRY(BMS_CHARGING_CLOSING_AIR_POS)
+    STATE_MAP_ENTRY(BMS_CHARGING_OPENING_PRECHARGE)
+    STATE_MAP_ENTRY(BMS_CHARGING_CHARGING)
+    STATE_MAP_ENTRY(BMS_CHARGING_RESETTING_AIRS_PRECHARGE)
     STATE_MAP_ENTRY(BMS_DRIVING_IDLE)
     STATE_MAP_ENTRY(BMS_DRIVING_CLOSING_AIR_NEG)
     STATE_MAP_ENTRY(BMS_DRIVING_CLOSING_PRECHARGE)
@@ -87,7 +80,6 @@ BEGIN_STATE_MAP(BMS)
     STATE_MAP_ENTRY(BMS_IMD_ERROR)
     STATE_MAP_ENTRY(BMS_AMS_IMD_ERROR)
     STATE_MAP_ENTRY(BMS_RESETTING_ERROR)
-
 END_STATE_MAP(BMS)
 
 /**************EVENTS DEFINITION **************/
@@ -97,14 +89,23 @@ END_STATE_MAP(BMS)
     *  This event is triggered when the AMS error is detected */
 /*  BMS CLOSING_AIR_NEG command event
     *  This event is triggered when the CLOSING_AIR_NEG command is detected */
-/*  BMS CLOSING_AIR_POS command event
-    *  This event is triggered when the CLOSING_AIR_POS command is detected */
 
 EVENT_DEFINE(BMS_IMD_Error_Event, BMSData){
     // Given the SetSpeed event, transition to a new state based upon
     // the current state of the state machine
     BEGIN_TRANSITION_MAP                    // - Current State -
 
+        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_IDLE
+        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_ACTIVE_IDLE
+        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_BALANCING
+        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_CHARGING_IDLE
+        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_CHARGING_CLOSING_AIR_NEG
+        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_CHARGING_CLOSING_PRECHARGE
+        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_CHARGING_PRECHARGE
+        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_CHARGING_CLOSING_AIR_POS
+        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_CHARGING_OPENING_PRECHARGE
+        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_CHARGING_CHARGING
+        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_CHARGING_RESETTING_AIRS_PRECHARGE
         TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_DRIVING_IDLE
         TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_DRIVING_CLOSING_AIR_NEG
         TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_DRIVING_CLOSING_PRECHARGE
@@ -120,31 +121,22 @@ EVENT_DEFINE(BMS_IMD_Error_Event, BMSData){
 
     END_TRANSITION_MAP(BMS, pEventData)}
 
-EVENT_DEFINE(BMS_TEMPERATURE_Error_Event, BMSData){
+EVENT_DEFINE(BMS_AMS_Error_Event, BMSData){
     // Given the SetSpeed event, transition to a new state based upon
     // the current state of the state machine
     BEGIN_TRANSITION_MAP // - Current State -
 
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_DRIVING_IDLE
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_DRIVING_CLOSING_AIR_NEG
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_DRIVING_CLOSING_PRECHARGE
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_DRIVING_PRECHARGE
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_DRIVING_CLOSING_AIR_POS
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_DRIVING_OPENING_PRECHARGE
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_DRIVING_DRIVING
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_DRIVING_RESETTING_AIRS_PRECHARGE
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_AMS_ERROR
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_IMD_ERROR
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_AMS_IMD_ERROR
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_RESETTING_ERROR
-
-    END_TRANSITION_MAP(BMS, pEventData)}
-
-EVENT_DEFINE(BMS_ELECTRICAL_Error_Event, BMSData){
-    // Given the SetSpeed event, transition to a new state based upon
-    // the current state of the state machine
-    BEGIN_TRANSITION_MAP // - Current State -
-
+        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_IDLE
+        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_ACTIVE_IDLE
+        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_BALANCING
+        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_CHARGING_IDLE
+        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_CHARGING_CLOSING_AIR_NEG
+        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_CHARGING_CLOSING_PRECHARGE
+        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_CHARGING_PRECHARGE
+        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_CHARGING_CLOSING_AIR_POS
+        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_CHARGING_OPENING_PRECHARGE
+        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_CHARGING_CHARGING
+        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_CHARGING_RESETTING_AIRS_PRECHARGE
         TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_DRIVING_IDLE
         TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_DRIVING_CLOSING_AIR_NEG
         TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_DRIVING_CLOSING_PRECHARGE
@@ -166,6 +158,17 @@ EVENT_DEFINE(BMS_CLOSE_AIR_NEG_REQ_Event, BMSData){
     // Reentrance is permitted
     BEGIN_TRANSITION_MAP                                   // - Current State -
 
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                // BMS_IDLE
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                // BMS_ACTIVE_IDLE
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                // BMS_BALANCING
+        TRANSITION_MAP_ENTRY(BMS_CHARGING_CLOSING_AIR_NEG) // BMS_CHARGING_IDLE
+        TRANSITION_MAP_ENTRY(BMS_CHARGING_CLOSING_AIR_NEG) // BMS_CHARGING_CLOSING_AIR_NEG
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                // BMS_CHARGING_CLOSING_PRECHARGE
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                // BMS_CHARGING_PRECHARGE
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                // BMS_CHARGING_CLOSING_AIR_POS
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                // BMS_CHARGING_OPENING_PRECHARGE
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                // BMS_CHARGING_CHARGING
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                // BMS_CHARGING_RESETTING_AIRS_PRECHARGE
         TRANSITION_MAP_ENTRY(BMS_DRIVING_CLOSING_AIR_NEG)  // BMS_DRIVING_IDLE
         TRANSITION_MAP_ENTRY(BMS_DRIVING_CLOSING_AIR_NEG)  // BMS_DRIVING_CLOSING_AIR_NEG
         TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                // BMS_DRIVING_CLOSING_PRECHARGE
@@ -187,6 +190,17 @@ EVENT_DEFINE(BMS_CLOSE_AIR_POS_REQ_Event, BMSData){
     // Reentrance is permitted
     BEGIN_TRANSITION_MAP                                  // - Current State -
 
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)               // BMS_IDLE
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)               // BMS_ACTIVE_IDLE
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)               // BMS_BALANCING
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)               // BMS_CHARGING_IDLE
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)               // BMS_CHARGING_CLOSING_AIR_NEG
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)               // BMS_CHARGING_CLOSING_PRECHARGE
+        TRANSITION_MAP_ENTRY(BMS_DRIVING_CLOSING_AIR_POS) // BMS_CHARGING_PRECHARGE
+        TRANSITION_MAP_ENTRY(BMS_DRIVING_CLOSING_AIR_POS) // BMS_CHARGING_CLOSING_AIR_POS
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)               // BMS_CHARGING_OPENING_PRECHARGE
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)               // BMS_CHARGING_CHARGING
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)               // BMS_CHARGING_RESETTING_AIRS_PRECHARGE
         TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)               // BMS_DRIVING_IDLE
         TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)               // BMS_DRIVING_CLOSING_AIR_NEG
         TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)               // BMS_DRIVING_CLOSING_PRECHARGE
@@ -209,6 +223,17 @@ EVENT_DEFINE(BMS_STOP_REQ_Event, BMSData)
     // Reentrance is permitted
     BEGIN_TRANSITION_MAP                                            // - Current State -
 
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                         // BMS_IDLE
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                         // BMS_ACTIVE_IDLE
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                         // BMS_BALANCING
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                         // BMS_CHARGING_IDLE
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                         // BMS_CHARGING_CLOSING_AIR_NEG
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                         // BMS_CHARGING_CLOSING_PRECHARGE
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                         // BMS_CHARGING_PRECHARGE
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                         // BMS_CHARGING_CLOSING_AIR_POS
+        TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                         // BMS_CHARGING_OPENING_PRECHARGE
+        TRANSITION_MAP_ENTRY(BMS_CHARGING_RESETTING_AIRS_PRECHARGE) // BMS_CHARGING_CHARGING
+        TRANSITION_MAP_ENTRY(BMS_CHARGING_RESETTING_AIRS_PRECHARGE) // BMS_CHARGING_RESETTING_AIRS_PRECHARGE
         TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                         // BMS_DRIVING_IDLE
         TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                         // BMS_DRIVING_CLOSING_AIR_NEG
         TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                         // BMS_DRIVING_CLOSING_PRECHARGE
@@ -225,135 +250,36 @@ EVENT_DEFINE(BMS_STOP_REQ_Event, BMSData)
     END_TRANSITION_MAP(BMS, pEventData)
 }
 
-EVENT_DEFINE(BMS_RESET_ERROR_REQ_Event, BMSData)
+EVENT_DEFINE(BMS_CHARGE_REQ_Event, BMSData)
 {
     // Given the BMS_CHARGE_REQ_Event , transition to a new state based upon 
     // the current state of the state machine
     // Reentrance is permitted
     BEGIN_TRANSITION_MAP // - Current State -
 
+            TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_IDLE
+            TRANSITION_MAP_ENTRY(BMS_CHARGING_IDLE)                    // BMS_ACTIVE_IDLE
+            TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_BALANCING
+            TRANSITION_MAP_ENTRY(BMS_CHARGING_IDLE)                    // BMS_CHARGING_IDLE
+            TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_CHARGING_CLOSING_AIR_NEG
+            TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_CHARGING_CLOSING_PRECHARGE
+            TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_CHARGING_PRECHARGE
+            TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_CHARGING_CLOSING_AIR_POS
+            TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_CHARGING_OPENING_PRECHARGE
+            TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_CHARGING_CHARGING
+            TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_CHARGING_RESETTING_AIRS_PRECHARGE
             TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_DRIVING_IDLE
             TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_DRIVING_CLOSING_AIR_NEG
             TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_DRIVING_CLOSING_PRECHARGE
             TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_DRIVING_PRECHARGE
             TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_DRIVING_CLOSING_AIR_POS
             TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_DRIVING_OPENING_PRECHARGE
-            TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_DRIVING_DRIVING
-            TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_DRIVING_RESETTING_AIRS_PRECHARGE
+            TRANSITION_MAP_ENTRY(BMS_DRIVING_RESETTING_AIRS_PRECHARGE) // BMS_DRIVING_DRIVING
+            TRANSITION_MAP_ENTRY(BMS_DRIVING_RESETTING_AIRS_PRECHARGE) // BMS_DRIVING_RESETTING_AIRS_PRECHARGE
             TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_AMS_ERROR
             TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_IMD_ERROR
-            TRANSITION_MAP_ENTRY(BMS_RESETTING_ERROR)                  // BMS_AMS_IMD_ERROR
-            TRANSITION_MAP_ENTRY(BMS_RESETTING_ERROR)                  // BMS_RESETTING_ERROR
+            TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_AMS_IMD_ERROR
+            TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_RESETTING_ERROR
 
         END_TRANSITION_MAP(BMS, pEventData)
 }
-
-/**************STATES DEFINITION **************/
-
-// State machine sits here when motor is not running
-STATE_DEFINE(DRIVING_IDLE, BMSData)
-{
-    ASSERT_TRUE(pEventData);
-    VariableSaving(pEventData);
-
-    printf("%s DRIVING_Idle\n", self->name);
-
-}
-STATE_DEFINE(DRIVING_CLOSING_AIR_NEG, BMSData)
-{   
-    ASSERT_TRUE(pEventData);
-    pEventData->air_neg_cmd_is_active = 1;
-    VariableSaving(pEventData);
-
-    printf("%s DRIVING_CLOSING_AIR\n", self->name);
-    if ( pEventData->air_neg_cmd_is_active && pEventData->air_neg_is_closed){
-        SM_InternalEvent(BMS_DRIVING_CLOSING_PRECHARGE, NULL);
-    } else if (!(pEventData->air_neg_cmd_is_active && pEventData->air_neg_is_closed)){
-        SM_InternalEvent(BMS_DRIVING_RESETTING_AIRS_PRECHARGE, NULL);
-    }
-    
-}
-STATE_DEFINE(DRIVING_CLOSING_PRECHARGE, BMSData)
-{
-    ASSERT_TRUE(pEventData);
-
-    VariableSaving(pEventData);
-    
-    if (pEventData->close_precharge_is_done){
-        SM_InternalEvent(BMS_DRIVING_PRECHARGE,NULL);
-    } else {
-        SM_InternalEvent(BMS_DRIVING_RESETTING_AIRS_PRECHARGE, NULL);
-    }
-
-    printf("%s DRIVING_CLOSING_PRECHARGE\n", self->name);
-    
-}
-
-STATE_DEFINE(DRIVING_PRECHARGE, BMSData)
-{
-    ASSERT_TRUE(pEventData);
-
-    VariableSaving(pEventData);
-    
-    printf("%s DRIVING_PRECHARGE\n", self->name);
-    
-}
-
-STATE_DEFINE(DRIVING_CLOSING_AIR_POS, BMSData)
-{   
-    ASSERT_TRUE(pEventData);
-    pEventData->air_pos_cmd_is_active = 1;
-    VariableSaving(pEventData);
-
-    printf("%s DRIVING_CLOSING_AIR_POS\n", self->name);
-    if ( pEventData->air_pos_cmd_is_active && pEventData->air_pos_is_closed){
-        SM_InternalEvent(BMS_DRIVING_OPENING_PRECHARGE, NULL);
-    } else if (!(pEventData->air_pos_cmd_is_active && pEventData->air_pos_is_closed)){
-        SM_InternalEvent(BMS_DRIVING_RESETTING_AIRS_PRECHARGE, NULL);
-    }
-}
-
-STATE_DEFINE(DRIVING_OPENING_PRECHARGE, BMSData)
-{
-    ASSERT_TRUE(pEventData);
-
-    VariableSaving(pEventData);
-    
-    if (pEventData->close_precharge_is_done){
-        SM_InternalEvent(BMS_DRIVING_DRIVING,NULL);
-    }
-
-    printf("%s DRIVING_OPENING_PRECHARGE\n", self->name);
-    
-}
-
-STATE_DEFINE(DRIVING_DRIVING, BMSData)
-{
-    ASSERT_TRUE(pEventData);
-
-    VariableSaving(pEventData);
-    
-
-    printf("%s DRIVING_DRIVING OOOOOO\n", self->name);
-    
-}
-
-STATE_DEFINE(DRIVING_RESETTING_AIRS_PRECHARGE, BMSData)
-{
-    ASSERT_TRUE(pEventData);
-
-    VariableSaving(pEventData);
-    
-    printf("OPENING PRECHARGE\n");
-    printf("OPENING AIR POSITIVE\n");
-    printf("OPENING AIR NEGATIVE\n");
-
-
-    printf("%s DRIVING_RESET DONE\n", self->name);
-    
-    SM_InternalEvent(BMS_DRIVING_IDLE,NULL);
-}
-
-
-
-
