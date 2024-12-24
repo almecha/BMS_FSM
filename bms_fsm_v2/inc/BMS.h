@@ -14,6 +14,22 @@ typedef struct
 
 } BMS;
 
+enum States
+{   
+    BMS_DRIVING_IDLE,
+    BMS_DRIVING_CLOSING_AIR_NEG,
+    BMS_DRIVING_CLOSING_PRECHARGE,
+    BMS_DRIVING_PRECHARGE,
+    BMS_DRIVING_CLOSING_AIR_POS,
+    BMS_DRIVING_OPENING_PRECHARGE,
+    BMS_DRIVING_DRIVING,
+    BMS_DRIVING_RESETTING_AIRS_PRECHARGE,
+    BMS_AMS_ERROR,
+    BMS_IMD_ERROR,
+    BMS_AMS_IMD_ERROR,
+    BMS_RESETTING_ERROR,
+    ST_MAX_STATES
+};
 // Event data structure
 typedef struct
 {
@@ -26,6 +42,7 @@ typedef struct
     imd_err_is_active, imp_dcbus_is_active, imp_any_is_active, imp_hv_relays_signals_is_active,
     tsal_green_is_active, close_precharge_is_done;
     uint32_t fsm_reset_error_entry_time;
+    uint8_t current_state;
 
 } BMSData;
 
@@ -37,6 +54,7 @@ EVENT_DECLARE(BMS_CLOSE_AIR_POS_REQ_Event, BMSData);
 EVENT_DECLARE(BMS_STOP_REQ_Event, BMSData);
 EVENT_DECLARE(BMS_RESET_ERROR_REQ_Event, BMSData);
 
+ENTRY_DECLARE(RESETTING_ERROR, BMSData);
 
 
 
