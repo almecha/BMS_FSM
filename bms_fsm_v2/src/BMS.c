@@ -1,13 +1,18 @@
 #include "BMS.h"
 #include "StateMachine.h"
 #include <stdio.h>
+#include <stdint.h>
 
- uint64_t v_max_id_rx, v_min_id_rx, v_max_rx, v_min_rx, v_mean_rx;
+// Function prototype for HAL_GetTick
+uint32_t HAL_GetTick();
+
+uint64_t v_max_id_rx, v_min_id_rx, v_max_rx, v_min_rx, v_mean_rx;
 
 // NTC readings
-extern volatile uint8_t ntc_temp;   // probably for overtemperature errors
-extern volatile uint16_t ntc_value; // raw reading of the ntc
-
+volatile uint8_t ntc_temp;   // probably for overtemperature errors
+volatile uint16_t ntc_value; // raw reading of the ntc
+// global variables for the BMS
+uint32_t fsm_reset_error_entry_time = 0;
 // TLB signals
 uint8_t air_neg_cmd_is_active, air_neg_is_closed, air_neg_stg_mech_state_signal_is_active, air_pos_cmd_is_active,
     air_pos_is_closed, air_pos_stg_mech_state_signal_is_active,
@@ -39,6 +44,7 @@ void VariableSaving(BMSData* variables){
     variables->imp_hv_relays_signals_is_active = imp_hv_relays_signals_is_active;
     variables -> tsal_green_is_active = tsal_green_is_active;
     variables -> close_precharge_is_done = close_precharge_is_done;
+    variables -> fsm_reset_error_entry_time = fsm_reset_error_entry_time;
 }
 
 enum States
@@ -105,18 +111,18 @@ EVENT_DEFINE(BMS_IMD_Error_Event, BMSData){
     // the current state of the state machine
     BEGIN_TRANSITION_MAP                    // - Current State -
 
-        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_DRIVING_IDLE
-        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_DRIVING_CLOSING_AIR_NEG
-        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_DRIVING_CLOSING_PRECHARGE
-        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_DRIVING_PRECHARGE
-        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_DRIVING_CLOSING_AIR_POS
-        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_DRIVING_OPENING_PRECHARGE
-        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_DRIVING_DRIVING
-        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_DRIVING_RESETTING_AIRS_PRECHARGE
-        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_AMS_ERROR
-        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_IMD_ERROR
-        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_AMS_IMD_ERROR
-        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)     // BMS_RESETTING_ERROR
+        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)         // BMS_DRIVING_IDLE
+        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)         // BMS_DRIVING_CLOSING_AIR_NEG
+        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)         // BMS_DRIVING_CLOSING_PRECHARGE
+        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)         // BMS_DRIVING_PRECHARGE
+        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)         // BMS_DRIVING_CLOSING_AIR_POS
+        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)         // BMS_DRIVING_OPENING_PRECHARGE
+        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)         // BMS_DRIVING_DRIVING
+        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)         // BMS_DRIVING_RESETTING_AIRS_PRECHARGE
+        TRANSITION_MAP_ENTRY(BMS_AMS_IMD_ERROR)     // BMS_AMS_ERROR
+        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)         // BMS_IMD_ERROR
+        TRANSITION_MAP_ENTRY(BMS_AMS_IMD_ERROR)     // BMS_AMS_IMD_ERROR
+        TRANSITION_MAP_ENTRY(BMS_IMD_ERROR)         // BMS_RESETTING_ERROR
 
     END_TRANSITION_MAP(BMS, pEventData)}
 
@@ -134,8 +140,8 @@ EVENT_DEFINE(BMS_TEMPERATURE_Error_Event, BMSData){
         TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_DRIVING_DRIVING
         TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_DRIVING_RESETTING_AIRS_PRECHARGE
         TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_AMS_ERROR
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_IMD_ERROR
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_AMS_IMD_ERROR
+        TRANSITION_MAP_ENTRY(BMS_AMS_IMD_ERROR)     // BMS_IMD_ERROR
+        TRANSITION_MAP_ENTRY(BMS_AMS_IMD_ERROR)     // BMS_AMS_IMD_ERROR
         TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_RESETTING_ERROR
 
     END_TRANSITION_MAP(BMS, pEventData)}
@@ -145,18 +151,18 @@ EVENT_DEFINE(BMS_ELECTRICAL_Error_Event, BMSData){
     // the current state of the state machine
     BEGIN_TRANSITION_MAP // - Current State -
 
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_DRIVING_IDLE
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_DRIVING_CLOSING_AIR_NEG
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_DRIVING_CLOSING_PRECHARGE
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_DRIVING_PRECHARGE
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_DRIVING_CLOSING_AIR_POS
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_DRIVING_OPENING_PRECHARGE
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_DRIVING_DRIVING
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_DRIVING_RESETTING_AIRS_PRECHARGE
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_AMS_ERROR
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_IMD_ERROR
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_AMS_IMD_ERROR
-        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)     // BMS_RESETTING_ERROR
+        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)         // BMS_DRIVING_IDLE
+        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)         // BMS_DRIVING_CLOSING_AIR_NEG
+        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)         // BMS_DRIVING_CLOSING_PRECHARGE
+        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)         // BMS_DRIVING_PRECHARGE
+        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)         // BMS_DRIVING_CLOSING_AIR_POS
+        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)         // BMS_DRIVING_OPENING_PRECHARGE
+        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)         // BMS_DRIVING_DRIVING
+        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)         // BMS_DRIVING_RESETTING_AIRS_PRECHARGE
+        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)         // BMS_AMS_ERROR
+        TRANSITION_MAP_ENTRY(BMS_AMS_IMD_ERROR)     // BMS_IMD_ERROR
+        TRANSITION_MAP_ENTRY(BMS_AMS_IMD_ERROR)     // BMS_AMS_IMD_ERROR
+        TRANSITION_MAP_ENTRY(BMS_AMS_ERROR)         // BMS_RESETTING_ERROR
 
     END_TRANSITION_MAP(BMS, pEventData)}
 
@@ -240,8 +246,8 @@ EVENT_DEFINE(BMS_RESET_ERROR_REQ_Event, BMSData)
             TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_DRIVING_OPENING_PRECHARGE
             TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_DRIVING_DRIVING
             TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_DRIVING_RESETTING_AIRS_PRECHARGE
-            TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_AMS_ERROR
-            TRANSITION_MAP_ENTRY(CANNOT_HAPPEN)                        // BMS_IMD_ERROR
+            TRANSITION_MAP_ENTRY(BMS_RESETTING_ERROR)                  // BMS_AMS_ERROR
+            TRANSITION_MAP_ENTRY(BMS_RESETTING_ERROR)                  // BMS_IMD_ERROR
             TRANSITION_MAP_ENTRY(BMS_RESETTING_ERROR)                  // BMS_AMS_IMD_ERROR
             TRANSITION_MAP_ENTRY(BMS_RESETTING_ERROR)                  // BMS_RESETTING_ERROR
 
@@ -250,7 +256,6 @@ EVENT_DEFINE(BMS_RESET_ERROR_REQ_Event, BMSData)
 
 /**************STATES DEFINITION **************/
 
-// State machine sits here when motor is not running
 STATE_DEFINE(DRIVING_IDLE, BMSData)
 {
     ASSERT_TRUE(pEventData);
@@ -262,7 +267,8 @@ STATE_DEFINE(DRIVING_IDLE, BMSData)
 STATE_DEFINE(DRIVING_CLOSING_AIR_NEG, BMSData)
 {   
     ASSERT_TRUE(pEventData);
-    pEventData->air_neg_cmd_is_active = 1;
+    air_neg_cmd_is_active = 1;
+    air_neg_is_closed = 1;
     VariableSaving(pEventData);
 
     printf("%s DRIVING_CLOSING_AIR\n", self->name);
@@ -302,7 +308,7 @@ STATE_DEFINE(DRIVING_PRECHARGE, BMSData)
 STATE_DEFINE(DRIVING_CLOSING_AIR_POS, BMSData)
 {   
     ASSERT_TRUE(pEventData);
-    pEventData->air_pos_cmd_is_active = 1;
+    air_pos_cmd_is_active = 1;
     VariableSaving(pEventData);
 
     printf("%s DRIVING_CLOSING_AIR_POS\n", self->name);
@@ -352,6 +358,61 @@ STATE_DEFINE(DRIVING_RESETTING_AIRS_PRECHARGE, BMSData)
     printf("%s DRIVING_RESET DONE\n", self->name);
     
     SM_InternalEvent(BMS_DRIVING_IDLE,NULL);
+}
+
+STATE_DEFINE(AMS_ERROR, BMSData)
+{
+    ASSERT_TRUE(pEventData);
+    ams_err_is_active = 1;
+    VariableSaving(pEventData);
+    
+    printf("%s SET AMS ERROR HIGH\n", self->name);
+    
+}
+STATE_DEFINE(IMD_ERROR, BMSData)
+{
+    ASSERT_TRUE(pEventData);
+    imd_err_is_active = 1;
+    VariableSaving(pEventData);
+    
+    printf("%s SET IMD ERROR HIGH\n", self->name);
+    
+}
+STATE_DEFINE(AMS_IMD_ERROR, BMSData)
+{
+    ASSERT_TRUE(pEventData);
+
+    VariableSaving(pEventData);
+    
+    printf("%s SET AMS_IMD ERROR HIGH\n", self->name);
+    
+}
+STATE_DEFINE(RESETTING_ERROR, BMSData)
+{
+    ASSERT_TRUE(pEventData);
+    ams_err_is_active = 0;
+    imd_err_is_active = 0;
+    VariableSaving(pEventData);
+    
+    if (HAL_GetTick() - pEventData->fsm_reset_error_entry_time > 10000){
+        SM_InternalEvent(BMS_DRIVING_IDLE,NULL);
+    }
+
+    printf("%s RESETTING ERROR\n", self->name);
+    
+}
+ENTRY_DEFINE(RESETTING_ERROR, BMSData)
+{
+    ASSERT_TRUE(pEventData);
+    printf("%s Entry to resetting error\n", self->name);
+    fsm_reset_error_entry_time = HAL_GetTick();
+
+}
+
+// Provide definition for HAL_GetTick
+uint32_t HAL_GetTick() {
+    // Implementation of HAL_GetTick
+    return 0; // Placeholder implementation
 }
 
 

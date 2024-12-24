@@ -25,6 +25,7 @@ typedef struct
     ams_err_is_active, dcbus_is_over60_v, dcbus_prech_rly_cmd_is_active, dcbus_prech_rly_is_closed,
     imd_err_is_active, imp_dcbus_is_active, imp_any_is_active, imp_hv_relays_signals_is_active,
     tsal_green_is_active, close_precharge_is_done;
+    uint32_t fsm_reset_error_entry_time;
 
 } BMSData;
 
