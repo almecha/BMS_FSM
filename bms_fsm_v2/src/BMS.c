@@ -384,7 +384,7 @@ STATE_DEFINE(AMS_ERROR, BMSData)
     ams_err_is_active = 1;
     VariableSaving(pEventData);
     
-    printf("%s SET AMS ERROR HIGH\n", self->name);
+    printf(" SET AMS ERROR HIGH\n");
     
 }
 STATE_DEFINE(IMD_ERROR, BMSData)
@@ -394,7 +394,7 @@ STATE_DEFINE(IMD_ERROR, BMSData)
     imd_err_is_active = 1;
     VariableSaving(pEventData);
     
-    printf("IMD ERROR STATE\n", self->name);
+    printf("IMD ERROR STATE\n");
     
 }
 STATE_DEFINE(AMS_IMD_ERROR, BMSData)
@@ -404,7 +404,7 @@ STATE_DEFINE(AMS_IMD_ERROR, BMSData)
 
     VariableSaving(pEventData);
     
-    printf("%s AMS_IMD ERROR STATE\n", self->name);
+    printf("AMS_IMD ERROR STATE\n");
     
 }
 STATE_DEFINE(RESETTING_ERROR, BMSData)
@@ -426,7 +426,7 @@ STATE_DEFINE(RESETTING_ERROR, BMSData)
 ENTRY_DEFINE(RESETTING_ERROR, BMSData)
 {
     ASSERT_TRUE(pEventData);
-    printf("%s Entry to resetting error\n", self->name);
+    printf("Entry to resetting error\n");
     fsm_reset_error_entry_time = 0;
 
 }
