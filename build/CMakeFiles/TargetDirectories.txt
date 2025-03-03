@@ -1,3 +1,0 @@
-/home/nukharetrd/SquadraCorse_WS/BMS_FSM/build/CMakeFiles/BMS_FSM_APP.dir
-/home/nukharetrd/SquadraCorse_WS/BMS_FSM/build/CMakeFiles/edit_cache.dir
-/home/nukharetrd/SquadraCorse_WS/BMS_FSM/build/CMakeFiles/rebuild_cache.dir

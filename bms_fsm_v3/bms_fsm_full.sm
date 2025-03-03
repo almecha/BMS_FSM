@@ -1,0 +1,79 @@
+Initial: power_off
+FSM: BMS
+Actions: BMS_Actions
+{
+  // This is an abstract super state for handling faults
+  (Base)  {
+    IMD_ERROR       fault       {openAIRs}
+    AMS_ERROR       fault       {openAIRs}
+  }
+
+  // This is an abstract super state for charging
+  (Charging)  {
+    DISCONNECT      power_on       -
+  }
+
+  // This is an abstract super state for driving mode( Ready )
+  (Ready)   {
+    UNMOUNT_CAR   power_on    -
+    ERROR_CLOSE_AIR_NEG   resetting_airs_precharge {openAIRPositive openPrecharge openAIRNegative}
+    ERROR_PRECHARGE       resetting_airs_precharge {openAIRPositive openPrecharge openAIRNegative}
+    ERROR_CLOSE_AIR_POS   resetting_airs_precharge {openAIRPositive openPrecharge openAIRNegative}
+  }
+  
+  power_off : Base    { 
+    TURN_ON    power_on    -
+  }
+
+  power_on : Base {
+    TURN_OFF    power_off    -
+    CHARGING    charging_idle      -
+    MOUNT_CAR   ready_idle  -
+  }
+
+  // Charging routines
+  charging_idle : Base : Charging {
+    BALANCING_REQ   balancing   balanceCells
+  }
+
+  balancing : Base : Charging  {
+    DONE_BALANCE_CELLS  charging_idle   -
+  }
+
+  // Driving routines
+  ready_idle : Base : Ready {
+    CLOSE_AIRS_REQ    closing_air_neg   closeAIRNegative
+  }
+
+  closing_air_neg : Base  : Ready {
+    DONE_CLOSE_AIR_NEG    closing_precharge   closePrecharge
+  }
+
+  closing_precharge : Base  : Ready {
+    DONE_PRECHARGE    precharged    -
+  }
+
+  precharged : Base : Ready {
+    CLOSE_AIR_POS  closing_air_pos  closeAIRPositive
+  }
+
+  closing_air_pos : Base : Ready {
+    DONE_CLOSE_AIR_POS  opening_precharge   openPrecharge
+  }
+
+  opening_precharge : Base : Ready {
+    DONE_OPEN_PRECHARGE   driving   -
+  }
+
+  driving : Base : Ready {
+    STOP  resetting_airs_precharge  {openAIRPositive openPrecharge openAIRNegative}
+  }
+  
+  resetting_airs_precharge : Base : Ready {
+    -   ready_idle  -
+  }
+  // Fault case (IMD AMS errors)
+  fault : Base  <openShutdown { 
+    DONE_OPEN_AIRS  ready_idle    -
+  }
+}

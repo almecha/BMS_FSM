@@ -1,1 +1,0 @@
-/usr/bin/c++ CMakeFiles/BMS_FSM_APP.dir/BMS.c.o CMakeFiles/BMS_FSM_APP.dir/main.c.o -o BMS_FSM_APP 
