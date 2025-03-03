@@ -1,0 +1,36 @@
+Initial: power_off
+FSM: BMS
+Actions: BMS_Actions
+{
+  // This is an abstract super state for handling faults
+  (Base)  {
+    IMD_ERROR       fault       {openAIRs}
+    AMS_ERROR       fault       {openAIRs}
+  }
+
+  // This is an abstract super state for charging
+  (Charging)  {
+    DISCONNECT      power_on       -
+  }
+
+  power_off : Base    { 
+    TURN_ON    power_on    -
+  }
+
+  power_on : Base {
+    TURN_OFF    power_off    -
+    CHARGING    charging_idle      -
+  }
+
+  charging_idle : Base : Charging {
+    BALANCING_REQ   balancing   balanceCells
+  }
+
+  balancing : Base : Charging  {
+    DONE_BALANCE_CELLS  charging_idle   -
+  }
+
+  fault : Base { 
+    DONE_OPEN_AIRS  power_on    -
+  }
+}
